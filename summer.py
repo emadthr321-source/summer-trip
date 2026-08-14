@@ -47,16 +47,19 @@ def undo_last_action(fam):
     st.warning("لا توجد عمليات سابقة للتراجع عنها لهذه الأسرة.")
 
 
-# تصميم واجهة الهيدر
-st.markdown(
-    """
-    <div style='background: linear-gradient(135deg, #1b4d3e, #2c6b56); padding: 20px; border-radius: 12px; color: white; text-align: center; margin-bottom: 20px;'>
-        <h1 style='margin:0; font-size: 2rem;'>رحلة النماص الختامية 🏔️</h1>
-        <p style='margin:5px 0 0 0; font-size: 1.1rem;'>شعار الرحلة: صحبة الخير ❤️</p>
-    </div>
-""",
-    unsafe_allow_html=True,
-)
+# عرض صورة الشعار في الهيدر (تأكد من وضع اسم الصورة الصحيح بجوار ملف الـ python)
+try:
+  st.image("header.png", use_container_width=True)
+except:
+  st.markdown(
+      """
+        <div style='background: linear-gradient(135deg, #1b4d3e, #2c6b56); padding: 20px; border-radius: 12px; color: white; text-align: center; margin-bottom: 20px;'>
+            <h1 style='margin:0; font-size: 2rem;'>رحلة النماص الختامية 🏔️</h1>
+            <p style='margin:5px 0 0 0; font-size: 1.1rem;'>شعار الرحلة: صحبة الخير ❤️</p>
+        </div>
+    """,
+      unsafe_allow_html=True,
+  )
 
 # الشريط الجانبي لتحديد الصلاحيات
 st.sidebar.title("🔐 لوحة التحكم والصلاحيات")
