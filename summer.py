@@ -1,36 +1,77 @@
+import json
+import os
 import streamlit as st
 
 st.set_page_config(
     page_title="رحلة النماص - برنامج التقييم", page_icon="🏔️", layout="wide"
 )
 
+# اسم ملف الحفظ التلقائي
+DATA_FILE = "data.json"
+
 # أسماء الأسر الجديدة
 family_names = ["أسرة المحبة", "أسرة الاخاء", "أسرة الوفاق", "أسرة الوصال"]
 
-# تهيئة قاعدة البيانات في الجلسة
-if "families" not in st.session_state:
-  st.session_state.families = {
-      fam: {"score": 0, "logs": [], "history": []} for fam in family_names
+
+# دوال حفظ وتحميل البيانات من ملف
+def load_data():
+  if os.path.exists(DATA_FILE):
+    try:
+      with open(DATA_FILE, "r", encoding="utf-8") as f:
+        return json.load(f)
+    except:
+      return None
+  return None
+
+
+def save_data_to_file():
+  data = {
+      "families": st.session_state.families,
+      "cultural_table": st.session_state.cultural_table,
+      "festival_logs": st.session_state.festival_logs,
+      "social_logs": st.session_state.social_logs,
+      "sport_stage": st.session_state.sport_stage,
   }
-
-if "cultural_table" not in st.session_state:
-  st.session_state.cultural_table = []
-
-if "festival_logs" not in st.session_state:
-  st.session_state.festival_logs = []
-
-if "social_logs" not in st.session_state:
-  st.session_state.social_logs = []
-
-if "sport_stage" not in st.session_state:
-  st.session_state.sport_stage = "يوم الإثنين"
+  with open(DATA_FILE, "w", encoding="utf-8") as f:
+    json.dump(data, f, ensure_ascii=False, indent=4)
 
 
-# دالة لتسجيل الحالة وتتبعها لكل أسرة
+# استرجاع البيانات المحفوظة إن وجدت
+saved_data = load_data()
+
+if saved_data and "families" in saved_data:
+  if "families" not in st.session_state:
+    st.session_state.families = saved_data["families"]
+  if "cultural_table" not in st.session_state:
+    st.session_state.cultural_table = saved_data.get("cultural_table", [])
+  if "festival_logs" not in st.session_state:
+    st.session_state.festival_logs = saved_data.get("festival_logs", [])
+  if "social_logs" not in st.session_state:
+    st.session_state.social_logs = saved_data.get("social_logs", [])
+  if "sport_stage" not in st.session_state:
+    st.session_state.sport_stage = saved_data.get("sport_stage", "يوم الإثنين")
+else:
+  # التهيئة الافتراضية لو لم يجد ملف حفظ
+  if "families" not in st.session_state:
+    st.session_state.families = {
+        fam: {"score": 0, "logs": [], "history": []} for fam in family_names
+    }
+  if "cultural_table" not in st.session_state:
+    st.session_state.cultural_table = []
+  if "festival_logs" not in st.session_state:
+    st.session_state.festival_logs = []
+  if "social_logs" not in st.session_state:
+    st.session_state.social_logs = []
+  if "sport_stage" not in st.session_state:
+    st.session_state.sport_stage = "يوم الإثنين"
+
+
+# دالة لتسجيل الحالة وتتبعها لكل أسرة مع الحفظ التلقائي
 def save_history(fam, pts, log_msg):
   st.session_state.families[fam]["history"].append(
       {"points": pts, "log": log_msg}
   )
+  save_data_to_file()
 
 
 # دالة العودة للسابق (التراجع)
@@ -41,13 +82,14 @@ def undo_last_action(fam):
     st.session_state.families[fam]["score"] -= last["points"]
     if st.session_state.families[fam]["logs"]:
       st.session_state.families[fam]["logs"].pop(0)
+    save_data_to_file()
     st.success(f"تم التراجع عن آخر عملية لـ {fam} بنجاح!")
     st.rerun()
   else:
     st.warning("لا توجد عمليات سابقة للتراجع عنها لهذه الأسرة.")
 
 
-# عرض صورة الشعار في الهيدر (تأكد من وضع اسم الصورة الصحيح بجوار ملف الـ python)
+# عرض صورة الشعار في الهيدر
 try:
   st.image("header.png", use_container_width=True)
 except:
@@ -133,13 +175,13 @@ if selected_section == "🏆 البرنامج التحفيزي (الترتيب �
       m_reason = st.text_input("السبب:", key="m_reason")
 
     if st.button("إضافة / خصم النقاط"):
-      save_history(m_fam, m_pts, f"{m_pts} نقطة ({m_reason or 'إضافة يدوية'})")
       st.session_state.families[m_fam]["score"] += m_pts
       sign = "+" if m_pts >= 0 else ""
       st.session_state.families[m_fam]["logs"].insert(
           0, f"{sign}{m_pts} نقطة ({m_reason or 'إضافة يدوية'})"
       )
-      st.success("تم تحديث النقاط بنجاح!")
+      save_history(m_fam, m_pts, f"{m_pts} نقطة ({m_reason or 'إضافة يدوية'})")
+      st.success("تم تحديث النقاط وحفظها بنجاح!")
       st.rerun()
 
 # ================= 2. البرنامج الثقافي =================
@@ -167,11 +209,11 @@ elif selected_section == "📖 البرنامج الثقافي":
       else:
         winner = t1 if s1 > s2 else (t2 if s2 > s1 else None)
         if winner:
-          save_history(winner, 3, f"+3 نقاط (الفوز في {cul_activity})")
           st.session_state.families[winner]["score"] += 3
           st.session_state.families[winner]["logs"].insert(
               0, f"+3 نقاط (الفوز في {cul_activity})"
           )
+          save_history(winner, 3, f"+3 نقاط (الفوز في {cul_activity})")
 
         st.session_state.cultural_table.insert(
             0,
@@ -184,10 +226,10 @@ elif selected_section == "📖 البرنامج الثقافي":
                 ),
             },
         )
+        save_data_to_file()
         st.success("تم حفظ الجولة بنجاح!")
         st.rerun()
 
-    # زر التراجع الخاص بالمسابقة الثقافية
     st.markdown("---")
     st.subheader("↩️ تراجع عن آخر نتيجة في الدوري الثقافي")
     undo_cul_fam = st.selectbox(
@@ -208,12 +250,12 @@ elif selected_section == "📖 البرنامج الثقافي":
           "النقاط المحصودة:", min_value=0, value=0, key="k_pts"
       )
     if st.button("تسجيل نقاط الفاصل الحركي"):
-      save_history(k_fam, k_pts, f"+{k_pts} نقطة (فاصل حركي ثقافي)")
       st.session_state.families[k_fam]["score"] += k_pts
       st.session_state.families[k_fam]["logs"].insert(
           0, f"+{k_pts} نقطة (فاصل حركي ثقافي)"
       )
-      st.success("تم تسجيل الفاصل بنجاح!")
+      save_history(k_fam, k_pts, f"+{k_pts} نقطة (فاصل حركي ثقافي)")
+      st.success("تم تسجيل الفاصل وحفظه بنجاح!")
       st.rerun()
 
   st.markdown("---")
@@ -239,23 +281,26 @@ elif selected_section == "⚽ البرنامج الرياضي":
           f"⚽ دوري كرة القدم - المرحلة الحالية: [{st.session_state.sport_stage}]"
       )
 
-      # أزرار التنقل بين أيام دوري كرة القدم وزر النهائي
       col_d1, col_d2, col_d3, col_d4 = st.columns(4)
       with col_d1:
         if st.button("📅 يوم الإثنين"):
           st.session_state.sport_stage = "يوم الإثنين"
+          save_data_to_file()
           st.rerun()
       with col_d2:
         if st.button("📅 يوم الثلاثاء"):
           st.session_state.sport_stage = "يوم الثلاثاء"
+          save_data_to_file()
           st.rerun()
       with col_d3:
         if st.button("📅 يوم الأربعاء"):
           st.session_state.sport_stage = "يوم الأربعاء"
+          save_data_to_file()
           st.rerun()
       with col_d4:
         if st.button("🏆 النهائي"):
           st.session_state.sport_stage = "النهائي"
+          save_data_to_file()
           st.rerun()
 
       if st.session_state.sport_stage in [
@@ -283,36 +328,30 @@ elif selected_section == "⚽ البرنامج الرياضي":
             f"تسجيل نتيجة {st.session_state.sport_stage} وترصيد النقاط"
         ):
           if score_a > score_b:
-            save_history(
-                team_a,
-                3,
-                f"+3 نقاط (فوز في {st.session_state.sport_stage} ضد {team_b})",
-            )
             st.session_state.families[team_a]["score"] += 3
             st.session_state.families[team_a]["logs"].insert(
                 0,
                 f"+3 نقاط (فوز في {st.session_state.sport_stage} ضد {team_b})",
             )
+            save_history(
+                team_a,
+                3,
+                f"+3 نقاط (فوز في {st.session_state.sport_stage} ضد {team_b})",
+            )
             st.success(f"فاز فريق {team_a} وتم رصيد 3 نقاط بنجاح!")
           elif score_b > score_a:
-            save_history(
-                team_b,
-                3,
-                f"+3 نقاط (فوز في {st.session_state.sport_stage} ضد {team_a})",
-            )
             st.session_state.families[team_b]["score"] += 3
             st.session_state.families[team_b]["logs"].insert(
                 0,
                 f"+3 نقاط (فوز في {st.session_state.sport_stage} ضد {team_a})",
             )
+            save_history(
+                team_b,
+                3,
+                f"+3 نقاط (فوز في {st.session_state.sport_stage} ضد {team_a})",
+            )
             st.success(f"فاز فريق {team_b} وتم رصيد 3 نقاط بنجاح!")
           else:
-            save_history(
-                team_a, 1, f"+1 نقطة (تعادل في {st.session_state.sport_stage})"
-            )
-            save_history(
-                team_b, 1, f"+1 نقطة (تعادل في {st.session_state.sport_stage})"
-            )
             st.session_state.families[team_a]["score"] += 1
             st.session_state.families[team_b]["score"] += 1
             st.session_state.families[team_a]["logs"].insert(
@@ -320,6 +359,12 @@ elif selected_section == "⚽ البرنامج الرياضي":
             )
             st.session_state.families[team_b]["logs"].insert(
                 0, f"+1 نقطة (تعادل في {st.session_state.sport_stage})"
+            )
+            save_history(
+                team_a, 1, f"+1 نقطة (تعادل في {st.session_state.sport_stage})"
+            )
+            save_history(
+                team_b, 1, f"+1 نقطة (تعادل في {st.session_state.sport_stage})"
             )
             st.success("تعادل إيجابي/سلبي، وتم رصيد نقطة لكل فريق!")
           st.rerun()
@@ -345,19 +390,20 @@ elif selected_section == "⚽ البرنامج الرياضي":
         champ_pts = st.number_input("نقاط إضافية للبطل للبطولة:", value=5)
 
         if st.button("تتويج البطل وإغلاق الدوري"):
+          st.session_state.families[champ]["score"] += champ_pts
+          st.session_state.families[champ]["logs"].insert(
+              0, f"+{champ_pts} نقطة (التتويج ببطولة دوري كرة القدم)"
+          )
           save_history(
               champ,
               champ_pts,
               f"+{champ_pts} نقطة (التتويج ببطولة دوري كرة القدم)",
           )
-          st.session_state.families[champ]["score"] += champ_pts
-          st.session_state.families[champ]["logs"].insert(
-              0, f"+{champ_pts} نقطة (التتويج ببطولة دوري كرة القدم)"
-          )
           st.success(
               f"تم تتويج {champ} بطلاً لدوري كرة القدم ورصيد نقاطه بنجاح!"
           )
           st.session_state.sport_stage = "يوم الإثنين"
+          save_data_to_file()
           st.rerun()
 
     else:
@@ -378,20 +424,18 @@ elif selected_section == "⚽ البرنامج الرياضي":
 
       if st.button("تسجيل نتيجة المباراة وترصيد النقاط"):
         if score_a > score_b:
-          save_history(team_a, 3, f"+3 نقاط (فوز في {sport_type})")
           st.session_state.families[team_a]["score"] += 3
           st.session_state.families[team_a]["logs"].insert(
               0, f"+3 نقاط (فوز في {sport_type})"
           )
+          save_history(team_a, 3, f"+3 نقاط (فوز في {sport_type})")
         elif score_b > score_a:
-          save_history(team_b, 3, f"+3 نقاط (فوز في {sport_type})")
           st.session_state.families[team_b]["score"] += 3
           st.session_state.families[team_b]["logs"].insert(
               0, f"+3 نقاط (فوز في {sport_type})"
           )
+          save_history(team_b, 3, f"+3 نقاط (فوز في {sport_type})")
         else:
-          save_history(team_a, 1, f"+1 نقطة (تعادل في {sport_type})")
-          save_history(team_b, 1, f"+1 نقطة (تعادل في {sport_type})")
           st.session_state.families[team_a]["score"] += 1
           st.session_state.families[team_b]["score"] += 1
           st.session_state.families[team_a]["logs"].insert(
@@ -400,10 +444,11 @@ elif selected_section == "⚽ البرنامج الرياضي":
           st.session_state.families[team_b]["logs"].insert(
               0, f"+1 نقطة (تعادل في {sport_type})"
           )
-        st.success("تم تسجيل النتيجة بنجاح!")
+          save_history(team_a, 1, f"+1 نقطة (تعادل في {sport_type})")
+          save_history(team_b, 1, f"+1 نقطة (تعادل في {sport_type})")
+        st.success("تم تسجيل النتيجة وحفظها بنجاح!")
         st.rerun()
 
-    # زر التراجع الخاص بالقسم الرياضي
     st.markdown("---")
     st.subheader("↩️ تراجع عن آخر نتيجة رياضية مسجلة")
     undo_sport_fam = st.selectbox(
@@ -421,7 +466,6 @@ elif selected_section == "⚽ البرنامج الرياضي":
     f_pts = st.number_input("النقاط:", value=0, key="f_pts")
     f_notes = st.text_area("ملاحظات وتقييم الأداء:")
     if st.button("اعتماد في جدول المهرجان الرياضي"):
-      save_history(f_fam, f_pts, f"+{f_pts} نقطة (مهرجان: {f_game or 'لعبة'})")
       st.session_state.families[f_fam]["score"] += f_pts
       st.session_state.families[f_fam]["logs"].insert(
           0, f"+{f_pts} نقطة (مهرجان: {f_game or 'لعبة'})"
@@ -429,7 +473,8 @@ elif selected_section == "⚽ البرنامج الرياضي":
       st.session_state.festival_logs.insert(
           0, f"🎪 {f_game} - {f_fam}: +{f_pts} نقطة. ({f_notes})"
       )
-      st.success("تم اعتماد نتائج المهرجان الرياضي!")
+      save_history(f_fam, f_pts, f"+{f_pts} نقطة (مهرجان: {f_game or 'لعبة'})")
+      st.success("تم اعتماد نتائج المهرجان الرياضي وحفظها!")
       st.rerun()
 
   st.markdown("---")
@@ -461,7 +506,6 @@ elif selected_section == "🤝 البرنامج الاجتماعي":
     soc_notes = st.text_area("ملاحظات المعلم التفصيلية:")
 
     if st.button("حفظ التقييم الاجتماعي"):
-      save_history(soc_fam, soc_pts, f"{soc_pts} نقطة ({soc_cat.split()[0]})")
       st.session_state.families[soc_fam]["score"] += soc_pts
       sign = "+" if soc_pts >= 0 else ""
       st.session_state.families[soc_fam]["logs"].insert(
@@ -471,6 +515,7 @@ elif selected_section == "🤝 البرنامج الاجتماعي":
           0,
           f"🤝 {soc_fam} [{soc_cat}]: {soc_pts} نقطة. ملاحظة: {soc_notes}",
       )
+      save_history(soc_fam, soc_pts, f"{soc_pts} نقطة ({soc_cat.split()[0]})")
       st.success("تم حفظ التقييم الاجتماعي بنجاح!")
       st.rerun()
 
