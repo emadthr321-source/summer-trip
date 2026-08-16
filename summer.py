@@ -10,10 +10,13 @@ st.set_page_config(
 )
 
 # --- إعدادات التخزين السحابي (رؤية البيانات من أي جهاز) ---
-CLOUD_SYNC_ENABLED = False  
-CLOUD_API_URL = ""  
+CLOUD_SYNC_ENABLED = False
+CLOUD_API_URL = ""
 
-# --- تصميم واجهة بfrom واضح ومتناسق مريح للعين (Dark Glassmorphism) ---
+# --- مسار الصورة المخصصة في الهيدر ---
+BANNER_IMAGE_PATH = "header.png"
+
+# --- تصميم واجهة واضحة ومتناسقة مريحة للعين (Dark Glassmorphism) ---
 st.markdown(
     """
     <style>
@@ -38,12 +41,16 @@ st.markdown(
         backdrop-filter: blur(16px);
         -webkit-backdrop-filter: blur(16px);
         border: 1px solid rgba(255, 255, 255, 0.12);
-        padding: 30px;
+        padding: 25px 30px;
         border-radius: 20px;
-        text-align: center;
         color: white;
         margin-bottom: 25px;
         box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 20px;
     }
 
     /* بطاقات الأسر الزجاجية الواضحة */
@@ -112,6 +119,7 @@ DATA_FILE = "data.json"
 family_names = ["أسرة المحبة", "أسرة الاخاء", "أسرة الوفاق", "أسرة الوصال"]
 league_names = ["دوري كرة القدم", "دوري التنس الأرضي", "دوري الثلاثيات", "دوري كرة الطائرة"]
 
+
 # --- نظام الحفظ المضمون (لا تفقد أي بيانات أبداً) ---
 def load_data():
     if os.path.exists(DATA_FILE):
@@ -121,6 +129,7 @@ def load_data():
         except Exception:
             pass
     return None
+
 
 def save_data_to_file():
     data = {
@@ -133,7 +142,7 @@ def save_data_to_file():
     }
     with open(DATA_FILE, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=4)
-        
+
     if CLOUD_SYNC_ENABLED and CLOUD_API_URL:
         try:
             req = urllib.request.Request(
@@ -146,6 +155,7 @@ def save_data_to_file():
         except Exception:
             pass
 
+
 def reset_app():
     if os.path.exists(DATA_FILE):
         os.remove(DATA_FILE)
@@ -153,6 +163,7 @@ def reset_app():
         del st.session_state[key]
     st.success("تم مسح كافة البيانات وإعادة ضبط المصنع بنجاح!")
     st.rerun()
+
 
 # تحميل البيانات المحفوظة تلقائياً
 saved_data = load_data()
@@ -187,13 +198,15 @@ else:
 for lg in league_names:
     if lg not in st.session_state.leagues_data:
         st.session_state.leagues_data[lg] = {
-            fam: {"لعب": 0, "فوز": 0, "تعادل": 0, "خسارة": 0, "له": 0, "عليه": 0, "النقاط": 0} 
+            fam: {"لعب": 0, "فوز": 0, "تعادل": 0, "خسارة": 0, "له": 0, "عليه": 0, "النقاط": 0}
             for fam in family_names
         }
+
 
 def save_history(fam, pts, log_msg):
     st.session_state.families[fam]["history"].append({"points": pts, "log": log_msg})
     save_data_to_file()
+
 
 def undo_last_action(fam):
     history = st.session_state.families[fam]["history"]
@@ -208,16 +221,35 @@ def undo_last_action(fam):
     else:
         st.warning("لا توجد عمليات سابقة للتراجع عنها لهذه الأسرة.")
 
-# الهيدر الواضح
-st.markdown(
-    """
-    <div class="hero-banner">
-        <h1 style='margin:0; font-size: 2.4rem; color: #f8fafc !important;'>رحلة النماص الختامية 🏔️</h1>
-        <p style='margin:10px 0 0 0; font-size: 1.25rem; color: #34d399; font-weight: 600;'>صحبة الخير ❤️ | نظام التقييم والمتابعة الاحترافي</p>
-    </div>
-""",
-    unsafe_allow_html=True,
-)
+
+# الهيدر الواضح مع دعم الصورة header.png
+if os.path.exists(BANNER_IMAGE_PATH):
+    st.markdown(
+        f"""
+        <div class="hero-banner">
+            <div>
+                <h1 style='margin:0; font-size: 2.4rem; color: #f8fafc !important;'>رحلة النماص الختامية 🏔️</h1>
+                <p style='margin:10px 0 0 0; font-size: 1.25rem; color: #34d399; font-weight: 600;'>صحبة الخير ❤️ | نظام التقييم والمتابعة الاحترافي</p>
+            </div>
+            <div>
+                <img src="{BANNER_IMAGE_PATH}" alt="شعار الرحلة" style="max-height: 90px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.2); object-fit: contain;">
+            </div>
+        </div>
+    """,
+        unsafe_allow_html=True,
+    )
+else:
+    st.markdown(
+        """
+        <div class="hero-banner" style="justify-content: center; text-align: center;">
+            <div>
+                <h1 style='margin:0; font-size: 2.4rem; color: #f8fafc !important;'>رحلة النماص الختامية 🏔️</h1>
+                <p style='margin:10px 0 0 0; font-size: 1.25rem; color: #34d399; font-weight: 600;'>صحبة الخير ❤️ | نظام التقييم والمتابعة الاحترافي</p>
+            </div>
+        </div>
+    """,
+        unsafe_allow_html=True,
+    )
 
 # الشريط الجانبي
 st.sidebar.title("🔐 لوحة التحكم والصلاحيات")
@@ -260,7 +292,7 @@ selected_section = st.selectbox(
 # ================= 1. البرنامج التحفيزي =================
 if selected_section == "🏆 البرنامج التحفيزي (الترتيب العام والحصيلة)":
     st.header("🏆 لوحة الشرف للأسر")
-    
+
     sorted_families = sorted(st.session_state.families.items(), key=lambda x: x[1]["score"], reverse=True)
 
     cols = st.columns(4)
@@ -269,7 +301,7 @@ if selected_section == "🏆 البرنامج التحفيزي (الترتيب �
             st.markdown(
                 f"""
                 <div class="family-card">
-                    <h3 style='color:#cbd5e1; margin:0; font-size: 1.1rem;'>#{idx+1} {fam_name}</h3>
+                    <h3 style='color:#cbd5e1; margin:0; font-size: 1.1rem;'>#{idx + 1} {fam_name}</h3>
                     <h1 style='color:#34d399; margin:14px 0; font-size: 2.8rem; font-weight: 900;'>{data['score']}</h1>
                     <p style='color:#94a3b8; font-size:0.95rem; margin:0;'>نقطة إجمالية</p>
                 </div>
@@ -283,7 +315,8 @@ if selected_section == "🏆 البرنامج التحفيزي (الترتيب �
         with st.expander(f"سجل {fam_name} (الإجمالي: {data['score']} نقطة)"):
             if data["logs"]:
                 for log in data["logs"]:
-                    st.markdown(f"<span style='color: #f1f5f9; font-size: 1.05rem;'>• {log}</span>", unsafe_allow_html=True)
+                    st.markdown(f"<span style='color: #f1f5f9; font-size: 1.05rem;'>• {log}</span>",
+                                unsafe_allow_html=True)
             else:
                 st.markdown("<span style='color: #94a3b8;'>لا توجد سجلات بعد.</span>", unsafe_allow_html=True)
 
@@ -403,29 +436,40 @@ elif selected_section == "⚽ البرنامج الرياضي":
 
                 if st.button("اعتماد النتيجة وتحديث الجدول"):
                     table = st.session_state.leagues_data[sport_type]
-                    table[team_a]["لعب"] += 1; table[team_a]["له"] += score_a; table[team_a]["عليه"] += score_b
-                    table[team_b]["لعب"] += 1; table[team_b]["له"] += score_b; table[team_b]["عليه"] += score_a
+                    table[team_a]["لعب"] += 1
+                    table[team_a]["له"] += score_a
+                    table[team_a]["عليه"] += score_b
+                    
+                    table[team_b]["لعب"] += 1
+                    table[team_b]["له"] += score_b
+                    table[team_b]["عليه"] += score_a
 
                     if score_a > score_b:
-                        table[team_a]["فوز"] += 1; table[team_a]["النقاط"] += 3; table[team_b]["خسارة"] += 1
+                        table[team_a]["فوز"] += 1
+                        table[team_a]["النقاط"] += 3
+                        table[team_b]["خسارة"] += 1
                         st.session_state.families[team_a]["score"] += 3
                         st.session_state.families[team_a]["logs"].insert(0, f"+3 نقاط (فوز في {sport_type})")
-                        save_history(team_a, 3, f"+3 نقاط (فوز)")
+                        save_history(team_a, 3, "+3 نقاط (فوز)")
                     elif score_b > score_a:
-                        table[team_b]["فوز"] += 1; table[team_b]["النقاط"] += 3; table[team_a]["خسارة"] += 1
+                        table[team_b]["فوز"] += 1
+                        table[team_b]["النقاط"] += 3
+                        table[team_a]["خسارة"] += 1
                         st.session_state.families[team_b]["score"] += 3
                         st.session_state.families[team_b]["logs"].insert(0, f"+3 نقاط (فوز في {sport_type})")
-                        save_history(team_b, 3, f"+3 نقاط (فوز)")
+                        save_history(team_b, 3, "+3 نقاط (فوز)")
                     else:
-                        table[team_a]["تعادل"] += 1; table[team_a]["النقاط"] += 1
-                        table[team_b]["تعادل"] += 1; table[team_b]["النقاط"] += 1
+                        table[team_a]["تعادل"] += 1
+                        table[team_a]["النقاط"] += 1
+                        table[team_b]["تعادل"] += 1
+                        table[team_b]["النقاط"] += 1
                         st.session_state.families[team_a]["score"] += 1
                         st.session_state.families[team_b]["score"] += 1
                         st.session_state.families[team_a]["logs"].insert(0, f"+1 نقطة (تعادل في {sport_type})")
                         st.session_state.families[team_b]["logs"].insert(0, f"+1 نقطة (تعادل في {sport_type})")
-                        save_history(team_a, 1, f"+1 نقطة (تعادل)")
-                        save_history(team_b, 1, f"+1 نقطة (تعادل)")
-                        
+                        save_history(team_a, 1, "+1 نقطة (تعادل)")
+                        save_history(team_b, 1, "+1 نقطة (تعادل)")
+
                     save_data_to_file()
                     st.success("تم اعتماد النتيجة وتحديث الترتيب بنجاح!")
                     st.rerun()
@@ -453,29 +497,40 @@ elif selected_section == "⚽ البرنامج الرياضي":
 
             if st.button("اعتماد النتيجة وتحديث الجدول"):
                 table = st.session_state.leagues_data[sport_type]
-                table[team_a]["لعب"] += 1; table[team_a]["له"] += score_a; table[team_a]["عليه"] += score_b
-                table[team_b]["لعب"] += 1; table[team_b]["له"] += score_b; table[team_b]["عليه"] += score_a
+                table[team_a]["لعب"] += 1
+                table[team_a]["له"] += score_a
+                table[team_a]["عليه"] += score_b
+                
+                table[team_b]["لعب"] += 1
+                table[team_b]["له"] += score_b
+                table[team_b]["عليه"] += score_a
 
                 if score_a > score_b:
-                    table[team_a]["فوز"] += 1; table[team_a]["النقاط"] += 3; table[team_b]["خسارة"] += 1
+                    table[team_a]["فوز"] += 1
+                    table[team_a]["النقاط"] += 3
+                    table[team_b]["خسارة"] += 1
                     st.session_state.families[team_a]["score"] += 3
                     st.session_state.families[team_a]["logs"].insert(0, f"+3 نقاط (فوز في {sport_type})")
-                    save_history(team_a, 3, f"+3 نقاط")
+                    save_history(team_a, 3, "+3 نقاط")
                 elif score_b > score_a:
-                    table[team_b]["فوز"] += 1; table[team_b]["النقاط"] += 3; table[team_a]["خسارة"] += 1
+                    table[team_b]["فوز"] += 1
+                    table[team_b]["النقاط"] += 3
+                    table[team_a]["خسارة"] += 1
                     st.session_state.families[team_b]["score"] += 3
                     st.session_state.families[team_b]["logs"].insert(0, f"+3 نقاط (فوز في {sport_type})")
-                    save_history(team_b, 3, f"+3 نقاط")
+                    save_history(team_b, 3, "+3 نقاط")
                 else:
-                    table[team_a]["تعادل"] += 1; table[team_a]["النقاط"] += 1
-                    table[team_b]["تعادل"] += 1; table[team_b]["النقاط"] += 1
+                    table[team_a]["تعادل"] += 1
+                    table[team_a]["النقاط"] += 1
+                    table[team_b]["تعادل"] += 1
+                    table[team_b]["النقاط"] += 1
                     st.session_state.families[team_a]["score"] += 1
                     st.session_state.families[team_b]["score"] += 1
                     st.session_state.families[team_a]["logs"].insert(0, f"+1 نقطة (تعادل في {sport_type})")
                     st.session_state.families[team_b]["logs"].insert(0, f"+1 نقطة (تعادل في {sport_type})")
-                    save_history(team_a, 1, f"+1 نقطة")
-                    save_history(team_b, 1, f"+1 نقطة")
-                
+                    save_history(team_a, 1, "+1 نقطة")
+                    save_history(team_b, 1, "+1 نقطة")
+
                 save_data_to_file()
                 st.success("تم تحديث الجدول بنجاح!")
                 st.rerun()
