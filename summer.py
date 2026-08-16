@@ -46,11 +46,6 @@ st.markdown(
         color: white;
         margin-bottom: 25px;
         box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        flex-wrap: wrap;
-        gap: 20px;
     }
 
     /* بطاقات الأسر الزجاجية الواضحة */
@@ -222,34 +217,25 @@ def undo_last_action(fam):
         st.warning("لا توجد عمليات سابقة للتراجع عنها لهذه الأسرة.")
 
 
-# الهيدر الواضح مع دعم الصورة header.png
-if os.path.exists(BANNER_IMAGE_PATH):
-    st.markdown(
-        f"""
-        <div class="hero-banner">
-            <div>
-                <h1 style='margin:0; font-size: 2.4rem; color: #f8fafc !important;'>رحلة النماص الختامية 🏔️</h1>
-                <p style='margin:10px 0 0 0; font-size: 1.25rem; color: #34d399; font-weight: 600;'>صحبة الخير ❤️ | نظام التقييم والمتابعة الاحترافي</p>
-            </div>
-            <div>
-                <img src="{BANNER_IMAGE_PATH}" alt="شعار الرحلة" style="max-height: 90px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.2); object-fit: contain;">
-            </div>
-        </div>
-    """,
-        unsafe_allow_html=True,
-    )
-else:
+# الهيدر الاحترافي مع عرض الصورة باستخدام st.image
+st.markdown('<div class="hero-banner">', unsafe_allow_html=True)
+col_img, col_txt = st.columns([1, 4])
+
+with col_img:
+    if os.path.exists(BANNER_IMAGE_PATH):
+        st.image(BANNER_IMAGE_PATH, use_container_width=True)
+    else:
+        st.warning("ملف الصورة غير موجود!")
+
+with col_txt:
     st.markdown(
         """
-        <div class="hero-banner" style="justify-content: center; text-align: center;">
-            <div>
-                <h1 style='margin:0; font-size: 2.4rem; color: #f8fafc !important;'>رحلة النماص الختامية 🏔️</h1>
-                <p style='margin:10px 0 0 0; font-size: 1.25rem; color: #34d399; font-weight: 600;'>صحبة الخير ❤️ | نظام التقييم والمتابعة الاحترافي</p>
-            </div>
-        </div>
+        <h1 style='margin:0; font-size: 2.4rem; color: #f8fafc !important;'>رحلة النماص الختامية 🏔️</h1>
+        <p style='margin:10px 0 0 0; font-size: 1.25rem; color: #34d399; font-weight: 600;'>صحبة الخير ❤️ | نظام التقييم والمتابعة الاحترافي</p>
     """,
         unsafe_allow_html=True,
     )
+st.markdown('</div>', unsafe_allow_html=True)
 
 # الشريط الجانبي
 st.sidebar.title("🔐 لوحة التحكم والصلاحيات")
