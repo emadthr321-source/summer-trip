@@ -9,7 +9,7 @@ st.set_page_config(
     page_title="رحلة النماص - النظام الاحترافي", page_icon="🏔️", layout="wide"
 )
 
-# --- إعدادات التخزين السحابي (رؤية البيانات من أي جهاز) ---
+# --- إعدادات التخزين السحابي ---
 CLOUD_SYNC_ENABLED = False
 CLOUD_API_URL = ""
 
@@ -33,19 +33,6 @@ st.markdown(
             radial-gradient(at 0% 0%, rgba(30, 41, 59, 0.7) 0px, transparent 50%),
             radial-gradient(at 100% 100%, rgba(15, 23, 42, 0.9) 0px, transparent 50%);
         background-attachment: fixed;
-    }
-
-    /* هيدر ترحيبي زجاجي واضح وفخم */
-    .hero-banner {
-        background: rgba(30, 41, 59, 0.85);
-        backdrop-filter: blur(16px);
-        -webkit-backdrop-filter: blur(16px);
-        border: 1px solid rgba(255, 255, 255, 0.12);
-        padding: 25px 30px;
-        border-radius: 20px;
-        color: white;
-        margin-bottom: 25px;
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
     }
 
     /* بطاقات الأسر الزجاجية الواضحة */
@@ -115,7 +102,7 @@ family_names = ["أسرة المحبة", "أسرة الاخاء", "أسرة ال
 league_names = ["دوري كرة القدم", "دوري التنس الأرضي", "دوري الثلاثيات", "دوري كرة الطائرة"]
 
 
-# --- نظام الحفظ المضمون (لا تفقد أي بيانات أبداً) ---
+# --- نظام الحفظ المضمون ---
 def load_data():
     if os.path.exists(DATA_FILE):
         try:
@@ -217,25 +204,13 @@ def undo_last_action(fam):
         st.warning("لا توجد عمليات سابقة للتراجع عنها لهذه الأسرة.")
 
 
-# الهيدر الاحترافي مع عرض الصورة باستخدام st.image
-st.markdown('<div class="hero-banner">', unsafe_allow_html=True)
-col_img, col_txt = st.columns([1, 4])
+# --- عرض الصورة فقط بعرض الصفحة بدلاً من العنوان الفارغ ---
+if os.path.exists(BANNER_IMAGE_PATH):
+    st.image(BANNER_IMAGE_PATH, use_container_width=True)
+else:
+    st.warning("ملف الصورة (header.png) غير موجود في المجلد!")
 
-with col_img:
-    if os.path.exists(BANNER_IMAGE_PATH):
-        st.image(BANNER_IMAGE_PATH, use_container_width=True)
-    else:
-        st.warning("ملف الصورة غير موجود!")
-
-with col_txt:
-    st.markdown(
-        """
-        <h1 style='margin:0; font-size: 2.4rem; color: #f8fafc !important;'>رحلة النماص الختامية 🏔️</h1>
-        <p style='margin:10px 0 0 0; font-size: 1.25rem; color: #34d399; font-weight: 600;'>صحبة الخير ❤️ | نظام التقييم والمتابعة الاحترافي</p>
-    """,
-        unsafe_allow_html=True,
-    )
-st.markdown('</div>', unsafe_allow_html=True)
+st.markdown("<br>", unsafe_allow_html=True)
 
 # الشريط الجانبي
 st.sidebar.title("🔐 لوحة التحكم والصلاحيات")
