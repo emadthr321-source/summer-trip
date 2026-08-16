@@ -9,11 +9,14 @@ st.set_page_config(
     page_title="رحلة النماص - النظام الاحترافي", page_icon="🏔️", layout="wide"
 )
 
-# --- إعدادات التخزين السحابي (رؤية البيانات من أي جهاز) ---
+# --- إعدادات التخزين السحابي ---
 CLOUD_SYNC_ENABLED = False
 CLOUD_API_URL = ""
 
-# --- تصميم واجهة بـ from واضح ومتناسق مريح للعين (Dark Glassmorphism) ---
+# --- مسار الصورة المخصصة في الهيدر ---
+BANNER_IMAGE_PATH = "header.png"
+
+# --- تصميم واجهة واضحة ومتناسقة مريحة للعين (Dark Glassmorphism) ---
 st.markdown(
     """
     <style>
@@ -26,24 +29,10 @@ st.markdown(
     /* خلفية واضحة وداكنة متناسقة مريحة جداً للعين */
     .stApp {
         background-color: #0b1120;
-        background-image:
+        background-image: 
             radial-gradient(at 0% 0%, rgba(30, 41, 59, 0.7) 0px, transparent 50%),
             radial-gradient(at 100% 100%, rgba(15, 23, 42, 0.9) 0px, transparent 50%);
         background-attachment: fixed;
-    }
-
-    /* هيدر ترحيبي زجاجي واضح وفخم */
-    .hero-banner {
-        background: rgba(30, 41, 59, 0.85);
-        backdrop-filter: blur(16px);
-        -webkit-backdrop-filter: blur(16px);
-        border: 1px solid rgba(255, 255, 255, 0.12);
-        padding: 30px;
-        border-radius: 20px;
-        text-align: center;
-        color: white;
-        margin-bottom: 25px;
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
     }
 
     /* بطاقات الأسر الزجاجية الواضحة */
@@ -113,7 +102,7 @@ family_names = ["أسرة المحبة", "أسرة الاخاء", "أسرة ال
 league_names = ["دوري كرة القدم", "دوري التنس الأرضي", "دوري الثلاثيات", "دوري كرة الطائرة"]
 
 
-# --- نظام الحفظ المضمون (لا تفقد أي بيانات أبداً) ---
+# --- نظام الحفظ المضمون ---
 def load_data():
     if os.path.exists(DATA_FILE):
         try:
@@ -215,16 +204,13 @@ def undo_last_action(fam):
         st.warning("لا توجد عمليات سابقة للتراجع عنها لهذه الأسرة.")
 
 
-# الهيدر الواضح
-st.markdown(
-    """
-    <div class="hero-banner">
-    <h1 style='margin:0; font-size: 2.4rem; color: #f8fafc !important;'>رحلة النماص الختامية 🏔️</h1>
-    <p style='margin:10px 0 0 0; font-size: 1.25rem; color: #34d399; font-weight: 600;'>صحبة الخير ❤️ | نظام التقييم والمتابعة الاحترافي</p>
-    </div>
-    """,
-    unsafe_allow_html=True,
-)
+# --- عرض الصورة فقط بعرض الصفحة بدلاً من العنوان الفارغ ---
+if os.path.exists(BANNER_IMAGE_PATH):
+    st.image(BANNER_IMAGE_PATH, use_container_width=True)
+else:
+    st.warning("ملف الصورة (header.png) غير موجود في المجلد!")
+
+st.markdown("<br>", unsafe_allow_html=True)
 
 # الشريط الجانبي
 st.sidebar.title("🔐 لوحة التحكم والصلاحيات")
@@ -276,11 +262,11 @@ if selected_section == "🏆 البرنامج التحفيزي (الترتيب �
             st.markdown(
                 f"""
                 <div class="family-card">
-                <h3 style='color:#cbd5e1; margin:0; font-size: 1.1rem;'>#{idx + 1} {fam_name}</h3>
-                <h1 style='color:#34d399; margin:14px 0; font-size: 2.8rem; font-weight: 900;'>{data['score']}</h1>
-                <p style='color:#94a3b8; font-size:0.95rem; margin:0;'>نقطة إجمالية</p>
+                    <h3 style='color:#cbd5e1; margin:0; font-size: 1.1rem;'>#{idx + 1} {fam_name}</h3>
+                    <h1 style='color:#34d399; margin:14px 0; font-size: 2.8rem; font-weight: 900;'>{data['score']}</h1>
+                    <p style='color:#94a3b8; font-size:0.95rem; margin:0;'>نقطة إجمالية</p>
                 </div>
-                """,
+            """,
                 unsafe_allow_html=True,
             )
 
@@ -354,11 +340,11 @@ elif selected_section == "📖 البرنامج الثقافي":
                 st.success("تم حفظ الجولة بنجاح!")
                 st.rerun()
 
-    st.markdown("---")
-    st.subheader("↩️ تراجع عن آخر نتيجة ثقافية")
-    undo_cul_fam = st.selectbox("اختر الأسرة للتراجع:", family_names, key="undo_cul")
-    if st.button("تراجع عن آخر إجراء ثقافي"):
-        undo_last_action(undo_cul_fam)
+        st.markdown("---")
+        st.subheader("↩️ تراجع عن آخر نتيجة ثقافية")
+        undo_cul_fam = st.selectbox("اختر الأسرة للتراجع:", family_names, key="undo_cul")
+        if st.button("تراجع عن آخر إجراء ثقافي"):
+            undo_last_action(undo_cul_fam)
 
     st.markdown("---")
     st.subheader("📊 جدول نتائج البرنامج الثقافي")
@@ -414,6 +400,7 @@ elif selected_section == "⚽ البرنامج الرياضي":
                     table[team_a]["لعب"] += 1
                     table[team_a]["له"] += score_a
                     table[team_a]["عليه"] += score_b
+                    
                     table[team_b]["لعب"] += 1
                     table[team_b]["له"] += score_b
                     table[team_b]["عليه"] += score_a
@@ -424,14 +411,14 @@ elif selected_section == "⚽ البرنامج الرياضي":
                         table[team_b]["خسارة"] += 1
                         st.session_state.families[team_a]["score"] += 3
                         st.session_state.families[team_a]["logs"].insert(0, f"+3 نقاط (فوز في {sport_type})")
-                        save_history(team_a, 3, f"+3 نقاط (فوز)")
+                        save_history(team_a, 3, "+3 نقاط (فوز)")
                     elif score_b > score_a:
                         table[team_b]["فوز"] += 1
                         table[team_b]["النقاط"] += 3
                         table[team_a]["خسارة"] += 1
                         st.session_state.families[team_b]["score"] += 3
                         st.session_state.families[team_b]["logs"].insert(0, f"+3 نقاط (فوز في {sport_type})")
-                        save_history(team_b, 3, f"+3 نقاط (فوز)")
+                        save_history(team_b, 3, "+3 نقاط (فوز)")
                     else:
                         table[team_a]["تعادل"] += 1
                         table[team_a]["النقاط"] += 1
@@ -441,8 +428,8 @@ elif selected_section == "⚽ البرنامج الرياضي":
                         st.session_state.families[team_b]["score"] += 1
                         st.session_state.families[team_a]["logs"].insert(0, f"+1 نقطة (تعادل في {sport_type})")
                         st.session_state.families[team_b]["logs"].insert(0, f"+1 نقطة (تعادل في {sport_type})")
-                        save_history(team_a, 1, f"+1 نقطة (تعادل)")
-                        save_history(team_b, 1, f"+1 نقطة (تعادل)")
+                        save_history(team_a, 1, "+1 نقطة (تعادل)")
+                        save_history(team_b, 1, "+1 نقطة (تعادل)")
 
                     save_data_to_file()
                     st.success("تم اعتماد النتيجة وتحديث الترتيب بنجاح!")
@@ -474,6 +461,7 @@ elif selected_section == "⚽ البرنامج الرياضي":
                 table[team_a]["لعب"] += 1
                 table[team_a]["له"] += score_a
                 table[team_a]["عليه"] += score_b
+                
                 table[team_b]["لعب"] += 1
                 table[team_b]["له"] += score_b
                 table[team_b]["عليه"] += score_a
@@ -484,14 +472,14 @@ elif selected_section == "⚽ البرنامج الرياضي":
                     table[team_b]["خسارة"] += 1
                     st.session_state.families[team_a]["score"] += 3
                     st.session_state.families[team_a]["logs"].insert(0, f"+3 نقاط (فوز في {sport_type})")
-                    save_history(team_a, 3, f"+3 نقاط")
+                    save_history(team_a, 3, "+3 نقاط")
                 elif score_b > score_a:
                     table[team_b]["فوز"] += 1
                     table[team_b]["النقاط"] += 3
                     table[team_a]["خسارة"] += 1
                     st.session_state.families[team_b]["score"] += 3
                     st.session_state.families[team_b]["logs"].insert(0, f"+3 نقاط (فوز في {sport_type})")
-                    save_history(team_b, 3, f"+3 نقاط")
+                    save_history(team_b, 3, "+3 نقاط")
                 else:
                     table[team_a]["تعادل"] += 1
                     table[team_a]["النقاط"] += 1
@@ -501,18 +489,18 @@ elif selected_section == "⚽ البرنامج الرياضي":
                     st.session_state.families[team_b]["score"] += 1
                     st.session_state.families[team_a]["logs"].insert(0, f"+1 نقطة (تعادل في {sport_type})")
                     st.session_state.families[team_b]["logs"].insert(0, f"+1 نقطة (تعادل في {sport_type})")
-                    save_history(team_a, 1, f"+1 نقطة")
-                    save_history(team_b, 1, f"+1 نقطة")
+                    save_history(team_a, 1, "+1 نقطة")
+                    save_history(team_b, 1, "+1 نقطة")
 
                 save_data_to_file()
                 st.success("تم تحديث الجدول بنجاح!")
                 st.rerun()
 
-    st.markdown("---")
-    st.subheader("↩️ تراجع عن آخر نتيجة رياضية")
-    undo_sport_fam = st.selectbox("اختر الأسرة للتراجع:", family_names, key="undo_sport")
-    if st.button("تراجع عن آخر إجراء رياضي"):
-        undo_last_action(undo_sport_fam)
+        st.markdown("---")
+        st.subheader("↩️ تراجع عن آخر نتيجة رياضية")
+        undo_sport_fam = st.selectbox("اختر الأسرة للتراجع:", family_names, key="undo_sport")
+        if st.button("تراجع عن آخر إجراء رياضي"):
+            undo_last_action(undo_sport_fam)
 
     st.markdown("---")
     st.subheader(f"📊 جدول ترتيب {sport_type}")
