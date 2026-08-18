@@ -105,6 +105,7 @@ league_names = [
     "دوري الثلاثيات",
     "دوري كرة الطائرة",
 ]
+football_days = ["يوم الإثنين", "يوم الثلاثاء", "يوم الأربعاء"]
 
 
 # --- نظام الحفظ المضمون ---
@@ -125,7 +126,8 @@ def save_data_to_file():
       "cultural_history": st.session_state.get("cultural_history", []),
       "festival_logs": st.session_state.festival_logs,
       "social_logs": st.session_state.social_logs,
-      "sport_stage": st.session_state.sport_stage,
+      "football_stages": st.session_state.get("football_stages", {}),
+      "football_history": st.session_state.get("football_history", {}),
       "leagues_data": st.session_state.leagues_data,
       "leagues_history": st.session_state.get("leagues_history", {}),
   }
@@ -168,8 +170,32 @@ if saved_data and "families" in saved_data:
     st.session_state.festival_logs = saved_data.get("festival_logs", [])
   if "social_logs" not in st.session_state:
     st.session_state.social_logs = saved_data.get("social_logs", [])
-  if "sport_stage" not in st.session_state:
-    st.session_state.sport_stage = saved_data.get("sport_stage", "يوم الإثنين")
+
+  # هيكل جداول كرة القدم المستقلة للأيام
+  if "football_stages" not in st.session_state:
+    st.session_state.football_stages = saved_data.get(
+        "football_stages",
+        {
+            day: {
+                fam: {
+                    "لعب": 0,
+                    "فوز": 0,
+                    "تعادل": 0,
+                    "خسارة": 0,
+                    "له": 0,
+                    "عليه": 0,
+                    "النقاط": 0,
+                }
+                for fam in family_names
+            }
+            for day in football_days
+        },
+    )
+  if "football_history" not in st.session_state:
+    st.session_state.football_history = saved_data.get(
+        "football_history", {day: [] for day in football_days}
+    )
+
   if "leagues_data" not in st.session_state:
     st.session_state.leagues_data = saved_data.get("leagues_data", {})
   if "leagues_history" not in st.session_state:
@@ -187,29 +213,51 @@ else:
     st.session_state.festival_logs = []
   if "social_logs" not in st.session_state:
     st.session_state.social_logs = []
-  if "sport_stage" not in st.session_state:
-    st.session_state.sport_stage = "يوم الإثنين"
+
+  if "football_stages" not in st.session_state:
+    st.session_state.football_stages = {
+        day: {
+            fam: {
+                "لعب": 0,
+                "فوز": 0,
+                "تعادل": 0,
+                "خسارة": 0,
+                "له": 0,
+                "عليه": 0,
+                "النقاط": 0,
+            }
+            for fam in family_names
+        }
+        for day in football_days
+    }
+  if "football_history" not in st.session_state:
+    st.session_state.football_history = {
+        day: [] for day in football_days
+    }
+
   if "leagues_data" not in st.session_state:
     st.session_state.leagues_data = {}
   if "leagues_history" not in st.session_state:
     st.session_state.leagues_history = {}
 
+# التأكد من بقية الدوريات الأخرى
 for lg in league_names:
-  if lg not in st.session_state.leagues_data:
-    st.session_state.leagues_data[lg] = {
-        fam: {
-            "لعب": 0,
-            "فوز": 0,
-            "تعادل": 0,
-            "خسارة": 0,
-            "له": 0,
-            "عليه": 0,
-            "النقاط": 0,
-        }
-        for fam in family_names
-    }
-  if lg not in st.session_state.leagues_history:
-    st.session_state.leagues_history[lg] = []
+  if lg != "دوري كرة القدم":
+    if lg not in st.session_state.leagues_data:
+      st.session_state.leagues_data[lg] = {
+          fam: {
+              "لعب": 0,
+              "فوز": 0,
+              "تعادل": 0,
+              "خسارة": 0,
+              "له": 0,
+              "عليه": 0,
+              "النقاط": 0,
+          }
+          for fam in family_names
+      }
+    if lg not in st.session_state.leagues_history:
+      st.session_state.leagues_history[lg] = []
 
 
 def save_history(fam, pts, log_msg):
@@ -234,7 +282,7 @@ def undo_last_manual_action(fam):
     st.warning("لا توجد عمليات سابقة للتراجع عنها لهذه الأسرة.")
 
 
-# --- عرض الصورة فقط بعرض الصفحة بدلاً من العنوان الفارغ ---
+# --- عرض الصورة في الهيدر ---
 if os.path.exists(BANNER_IMAGE_PATH):
   st.image(BANNER_IMAGE_PATH, use_container_width=True)
 else:
@@ -386,13 +434,13 @@ elif selected_section == "📖 البرنامج الثقافي":
     st.subheader("🎮 إدارة جولة المسابقة (الفائز يحصل على 3 نقاط)")
     c1, c2 = st.columns(2)
     with c1:
-      t1 = st.selectbox("الأسرة الأولى:", family_names, key="cul_t1")
+      t1 = st.selectbox("الطرف الأول:", family_names, key="cul_t1")
       s1 = st.number_input(
           "نقاط الأولى بالجولة:", min_value=0, value=0, key="cul_s1"
       )
     with c2:
       t2 = st.selectbox(
-          "الأسرة الثانية:",
+          "الطرف الثاني:",
           [f for f in family_names if f != t1],
           key="cul_t2",
       )
@@ -487,133 +535,199 @@ elif selected_section == "⚽ البرنامج الرياضي":
 
   sport_type = st.selectbox("اختر الدوري:", league_names)
 
-  if is_teacher:
-    st.markdown("---")
-    if sport_type == "دوري كرة القدم":
-      st.subheader(
-          f"⚽ دوري كرة القدم - المرحلة الحالية: [{st.session_state.sport_stage}]"
-      )
+  # --- دوري كرة القدم بجداول مستقلة تماماً لكل يوم ---
+  if sport_type == "دوري كرة القدم":
+    st.subheader("⚽ دوري كرة القدم - جداول مستقلة للأيام")
 
-      col_d1, col_d2, col_d3, col_d4 = st.columns(4)
-      with col_d1:
-        if st.button("📅 الإثنين"):
-          st.session_state.sport_stage = "يوم الإثنين"
-          save_data_to_file()
-          st.rerun()
-      with col_d2:
-        if st.button("📅 الثلاثاء"):
-          st.session_state.sport_stage = "يوم الثلاثاء"
-          save_data_to_file()
-          st.rerun()
-      with col_d3:
-        if st.button("📅 الأربعاء"):
-          st.session_state.sport_stage = "يوم الأربعاء"
-          save_data_to_file()
-          st.rerun()
-      with col_d4:
-        if st.button("🏆 النهائي"):
-          st.session_state.sport_stage = "النهائي"
-          save_data_to_file()
-          st.rerun()
+    selected_football_day = st.selectbox(
+        "اختر اليوم لعرض وتعديل جدوله:", football_days
+    )
 
-      if st.session_state.sport_stage in [
-          "يوم الإثنين",
-          "يوم الثلاثاء",
-          "يوم الأربعاء",
-      ]:
-        s_col1, s_col2 = st.columns(2)
-        with s_col1:
-          team_a = st.selectbox("الفريق الأول:", family_names, key="fa")
-          score_a = st.number_input("أهداف الأول:", value=0, key="sa")
-        with s_col2:
-          team_b = st.selectbox(
-              "الفريق الثاني:",
-              [f for f in family_names if f != team_a],
-              key="fb",
+    if is_teacher:
+      st.markdown("---")
+      st.markdown(f"**تسجيل مباراة جديدة في [{selected_football_day}]**")
+      s_col1, s_col2 = st.columns(2)
+      with s_col1:
+        team_a = st.selectbox("الفريق الأول:", family_names, key="f_team_a")
+        score_a = st.number_input("أهداف الأول:", value=0, key="f_score_a")
+      with s_col2:
+        team_b = st.selectbox(
+            "الفريق الثاني:",
+            [f for f in family_names if f != team_a],
+            key="f_team_b",
+        )
+        score_b = st.number_input("أهداف الثاني:", value=0, key="f_score_b")
+
+      if st.button(f"اعتماد نتيجة المباراة لـ ({selected_football_day})"):
+        table = st.session_state.football_stages[selected_football_day]
+        table[team_a]["لعب"] += 1
+        table[team_a]["له"] += score_a
+        table[team_a]["عليه"] += score_b
+
+        table[team_b]["لعب"] += 1
+        table[team_b]["له"] += score_b
+        table[team_b]["عليه"] += score_a
+
+        pts_a, pts_b = 0, 0
+        res_type = "draw"
+
+        if score_a > score_b:
+          table[team_a]["فوز"] += 1
+          table[team_a]["النقاط"] += 3
+          table[team_b]["خسارة"] += 1
+          st.session_state.families[team_a]["score"] += 3
+          st.session_state.families[team_a]["logs"].insert(
+              0, f"+3 نقاط (فوز في كرة القدم - {selected_football_day})"
           )
-          score_b = st.number_input("أهداف الثاني:", value=0, key="sb")
+          save_history(team_a, 3, f"+3 نقاط (فوز {selected_football_day})")
+          pts_a = 3
+          res_type = "win_a"
+        elif score_b > score_a:
+          table[team_b]["فوز"] += 1
+          table[team_b]["النقاط"] += 3
+          table[team_a]["خسارة"] += 1
+          st.session_state.families[team_b]["score"] += 3
+          st.session_state.families[team_b]["logs"].insert(
+              0, f"+3 نقاط (فوز في كرة القدم - {selected_football_day})"
+          )
+          save_history(team_b, 3, f"+3 نقاط (فوز {selected_football_day})")
+          pts_b = 3
+          res_type = "win_b"
+        else:
+          table[team_a]["تعادل"] += 1
+          table[team_a]["النقاط"] += 1
+          table[team_b]["تعادل"] += 1
+          table[team_b]["النقاط"] += 1
+          st.session_state.families[team_a]["score"] += 1
+          st.session_state.families[team_b]["score"] += 1
+          st.session_state.families[team_a]["logs"].insert(
+              0, f"+1 نقطة (تعادل في كرة القدم - {selected_football_day})"
+          )
+          st.session_state.families[team_b]["logs"].insert(
+              0, f"+1 نقطة (تعادل في كرة القدم - {selected_football_day})"
+          )
+          save_history(
+              team_a, 1, f"+1 نقطة (تعادل {selected_football_day})"
+          )
+          save_history(
+              team_b, 1, f"+1 نقطة (تعادل {selected_football_day})"
+          )
+          pts_a, pts_b = 1, 1
 
-        if st.button("اعتماد النتيجة وتحديث الجدول"):
-          table = st.session_state.leagues_data[sport_type]
-          table[team_a]["لعب"] += 1
-          table[team_a]["له"] += score_a
-          table[team_a]["عليه"] += score_b
+        st.session_state.football_history[selected_football_day].append({
+            "team_a": team_a,
+            "team_b": team_b,
+            "score_a": score_a,
+            "score_b": score_b,
+            "pts_a": pts_a,
+            "pts_b": pts_b,
+            "res_type": res_type,
+        })
 
-          table[team_b]["لعب"] += 1
-          table[team_b]["له"] += score_b
-          table[team_b]["عليه"] += score_a
+        save_data_to_file()
+        st.success(
+            f"تم اعتماد وتحديث جدول [{selected_football_day}] بنجاح!"
+        )
+        st.rerun()
 
-          pts_a, pts_b = 0, 0
-          res_type = "draw"
+      st.markdown("---")
+      st.subheader(f"⚙️ أدوات التحكم بـ ({selected_football_day})")
+      c_undo_f, c_reset_f = st.columns(2)
 
-          if score_a > score_b:
-            table[team_a]["فوز"] += 1
-            table[team_a]["النقاط"] += 3
-            table[team_b]["خسارة"] += 1
-            st.session_state.families[team_a]["score"] += 3
-            st.session_state.families[team_a]["logs"].insert(
-                0, f"+3 نقاط (فوز في {sport_type})"
-            )
-            save_history(team_a, 3, "+3 نقاط (فوز)")
-            pts_a = 3
-            res_type = "win_a"
-          elif score_b > score_a:
-            table[team_b]["فوز"] += 1
-            table[team_b]["النقاط"] += 3
-            table[team_a]["خسارة"] += 1
-            st.session_state.families[team_b]["score"] += 3
-            st.session_state.families[team_b]["logs"].insert(
-                0, f"+3 نقاط (فوز في {sport_type})"
-            )
-            save_history(team_b, 3, "+3 نقاط (فوز)")
-            pts_b = 3
-            res_type = "win_b"
+      with c_undo_f:
+        st.write(f"↩️ **تراجع عن آخر مباراة في ({selected_football_day})**")
+        if st.button(f"تراجع عن آخر مباراة"):
+          history = st.session_state.football_history[selected_football_day]
+          if history:
+            last_match = history.pop()
+            ta = last_match["team_a"]
+            tb = last_match["team_b"]
+            sa = last_match["score_a"]
+            sb = last_match["score_b"]
+            res = last_match["res_type"]
+
+            table = st.session_state.football_stages[selected_football_day]
+            table[ta]["لعب"] -= 1
+            table[ta]["له"] -= sa
+            table[ta]["عليه"] -= sb
+
+            table[tb]["لعب"] -= 1
+            table[tb]["له"] -= sb
+            table[tb]["عليه"] -= sa
+
+            if res == "win_a":
+              table[ta]["فوز"] -= 1
+              table[ta]["النقاط"] -= 3
+              table[tb]["خسارة"] -= 1
+              st.session_state.families[ta]["score"] -= 3
+              if st.session_state.families[ta]["logs"]:
+                st.session_state.families[ta]["logs"].pop(0)
+            elif res == "win_b":
+              table[tb]["فوز"] -= 1
+              table[tb]["النقاط"] -= 3
+              table[ta]["خسارة"] -= 1
+              st.session_state.families[tb]["score"] -= 3
+              if st.session_state.families[tb]["logs"]:
+                st.session_state.families[tb]["logs"].pop(0)
+            else:
+              table[ta]["تعادل"] -= 1
+              table[ta]["النقاط"] -= 1
+              table[tb]["تعادل"] -= 1
+              table[tb]["النقاط"] -= 1
+              st.session_state.families[ta]["score"] -= 1
+              st.session_state.families[tb]["score"] -= 1
+              if st.session_state.families[ta]["logs"]:
+                st.session_state.families[ta]["logs"].pop(0)
+              if st.session_state.families[tb]["logs"]:
+                st.session_state.families[tb]["logs"].pop(0)
+
+            save_data_to_file()
+            st.success("تم التراجع عن المباراة وإلغاء نقاطها بنجاح!")
+            st.rerun()
           else:
-            table[team_a]["تعادل"] += 1
-            table[team_a]["النقاط"] += 1
-            table[team_b]["تعادل"] += 1
-            table[team_b]["النقاط"] += 1
-            st.session_state.families[team_a]["score"] += 1
-            st.session_state.families[team_b]["score"] += 1
-            st.session_state.families[team_a]["logs"].insert(
-                0, f"+1 نقطة (تعادل في {sport_type})"
-            )
-            st.session_state.families[team_b]["logs"].insert(
-                0, f"+1 نقطة (تعادل في {sport_type})"
-            )
-            save_history(team_a, 1, "+1 نقطة (تعادل)")
-            save_history(team_b, 1, "+1 نقطة (تعادل)")
-            pts_a, pts_b = 1, 1
+            st.warning(f"لا توجد مباريات مسجلة في {selected_football_day}.")
 
-          st.session_state.leagues_history[sport_type].append({
-              "team_a": team_a,
-              "team_b": team_b,
-              "score_a": score_a,
-              "score_b": score_b,
-              "pts_a": pts_a,
-              "pts_b": pts_b,
-              "res_type": res_type,
-          })
+      with c_reset_f:
+        st.write(f"💥 **تصفير جدول ({selected_football_day})**")
+        chk_day_reset = st.checkbox(
+            f"تأكيد تصفير جدول {selected_football_day} فقط؟",
+            key=f"chk_{selected_football_day}",
+        )
+        if st.button(f"🔄 إعادة ضبط جدول ({selected_football_day})"):
+          if chk_day_reset:
+            st.session_state.football_stages[selected_football_day] = {
+                fam: {
+                    "لعب": 0,
+                    "فوز": 0,
+                    "تعادل": 0,
+                    "خسارة": 0,
+                    "له": 0,
+                    "عليه": 0,
+                    "النقاط": 0,
+                }
+                for fam in family_names
+            }
+            st.session_state.football_history[selected_football_day] = []
+            save_data_to_file()
+            st.success(f"تمت إعادة ضبط جدول {selected_football_day} بنجاح!")
+            st.rerun()
+          else:
+            st.warning("يرجى تحديد مربع التأكيد أولاً.")
 
-          save_data_to_file()
-          st.success("تم اعتماد النتيجة وتحديث الترتيب بنجاح!")
-          st.rerun()
+    st.markdown("---")
+    st.subheader(
+        f"📊 جدول ترتيب دوري كرة القدم لـ [{selected_football_day}]"
+    )
+    day_df = pd.DataFrame.from_dict(
+        st.session_state.football_stages[selected_football_day], orient="index"
+    )
+    day_df = day_df.sort_values(by="النقاط", ascending=False)
+    st.table(day_df)
 
-      elif st.session_state.sport_stage == "النهائي":
-        champ = st.selectbox("اختر البطل الفائز:", family_names)
-        champ_pts = st.number_input("نقاط إضافية للبطل:", value=5)
-        if st.button("تتويج البطل وإغلاق الدوري"):
-          st.session_state.families[champ]["score"] += champ_pts
-          st.session_state.families[champ]["logs"].insert(
-              0, f"+{champ_pts} نقطة (تتويج دوري كرة القدم)"
-          )
-          save_history(champ, champ_pts, f"+{champ_pts} نقطة (تتويج)")
-          st.success(f"تم تتويج {champ} بنجاح!")
-          st.session_state.sport_stage = "يوم الإثنين"
-          save_data_to_file()
-          st.rerun()
-
-    else:
+  # --- باقي الدوريات الأخرى ---
+  else:
+    if is_teacher:
+      st.markdown("---")
       s_col1, s_col2 = st.columns(2)
       with s_col1:
         team_a = st.selectbox("الفريق الأول:", family_names, key="other_a")
@@ -692,96 +806,96 @@ elif selected_section == "⚽ البرنامج الرياضي":
         st.success("تم تحديث الجدول بنجاح!")
         st.rerun()
 
-    st.markdown("---")
-    st.subheader(f"⚙️ أدوات التحكم بـ ({sport_type})")
-    c_undo_s, c_reset_s = st.columns(2)
+      st.markdown("---")
+      st.subheader(f"⚙️ أدوات التحكم بـ ({sport_type})")
+      c_undo_s, c_reset_s = st.columns(2)
 
-    with c_undo_s:
-      st.write("↩️ **تراجع عن آخر مباراة في الدوري الحركي**")
-      if st.button("تراجع عن آخر مباراة في هذا الدوري"):
-        history = st.session_state.leagues_history[sport_type]
-        if history:
-          last_match = history.pop()
-          ta = last_match["team_a"]
-          tb = last_match["team_b"]
-          sa = last_match["score_a"]
-          sb = last_match["score_b"]
-          res = last_match["res_type"]
+      with c_undo_s:
+        st.write("↩️ **تراجع عن آخر مباراة في هذا الدوري**")
+        if st.button("تراجع عن آخر مباراة مسجلة"):
+          history = st.session_state.leagues_history[sport_type]
+          if history:
+            last_match = history.pop()
+            ta = last_match["team_a"]
+            tb = last_match["team_b"]
+            sa = last_match["score_a"]
+            sb = last_match["score_b"]
+            res = last_match["res_type"]
 
-          table = st.session_state.leagues_data[sport_type]
-          table[ta]["لعب"] -= 1
-          table[ta]["له"] -= sa
-          table[ta]["عليه"] -= sb
+            table = st.session_state.leagues_data[sport_type]
+            table[ta]["لعب"] -= 1
+            table[ta]["له"] -= sa
+            table[ta]["عليه"] -= sb
 
-          table[tb]["لعب"] -= 1
-          table[tb]["له"] -= sb
-          table[tb]["عليه"] -= sa
+            table[tb]["لعب"] -= 1
+            table[tb]["له"] -= sb
+            table[tb]["عليه"] -= sa
 
-          if res == "win_a":
-            table[ta]["فوز"] -= 1
-            table[ta]["النقاط"] -= 3
-            table[tb]["خسارة"] -= 1
-            st.session_state.families[ta]["score"] -= 3
-            if st.session_state.families[ta]["logs"]:
-              st.session_state.families[ta]["logs"].pop(0)
-          elif res == "win_b":
-            table[tb]["فوز"] -= 1
-            table[tb]["النقاط"] -= 3
-            table[ta]["خسارة"] -= 1
-            st.session_state.families[tb]["score"] -= 3
-            if st.session_state.families[tb]["logs"]:
-              st.session_state.families[tb]["logs"].pop(0)
+            if res == "win_a":
+              table[ta]["فوز"] -= 1
+              table[ta]["النقاط"] -= 3
+              table[tb]["خسارة"] -= 1
+              st.session_state.families[ta]["score"] -= 3
+              if st.session_state.families[ta]["logs"]:
+                st.session_state.families[ta]["logs"].pop(0)
+            elif res == "win_b":
+              table[tb]["فوز"] -= 1
+              table[tb]["النقاط"] -= 3
+              table[ta]["خسارة"] -= 1
+              st.session_state.families[tb]["score"] -= 3
+              if st.session_state.families[tb]["logs"]:
+                st.session_state.families[tb]["logs"].pop(0)
+            else:
+              table[ta]["تعادل"] -= 1
+              table[ta]["النقاط"] -= 1
+              table[tb]["تعادل"] -= 1
+              table[tb]["النقاط"] -= 1
+              st.session_state.families[ta]["score"] -= 1
+              st.session_state.families[tb]["score"] -= 1
+              if st.session_state.families[ta]["logs"]:
+                st.session_state.families[ta]["logs"].pop(0)
+              if st.session_state.families[tb]["logs"]:
+                st.session_state.families[tb]["logs"].pop(0)
+
+            save_data_to_file()
+            st.success("تم التراجع عن المباراة بنجاح!")
+            st.rerun()
           else:
-            table[ta]["تعادل"] -= 1
-            table[ta]["النقاط"] -= 1
-            table[tb]["تعادل"] -= 1
-            table[tb]["النقاط"] -= 1
-            st.session_state.families[ta]["score"] -= 1
-            st.session_state.families[tb]["score"] -= 1
-            if st.session_state.families[ta]["logs"]:
-              st.session_state.families[ta]["logs"].pop(0)
-            if st.session_state.families[tb]["logs"]:
-              st.session_state.families[tb]["logs"].pop(0)
+            st.warning("لا توجد مباريات سابقة للتراجع عنها في هذا الدوري.")
 
-          save_data_to_file()
-          st.success("تم التراجع عن المباراة وإلغاء أهدافها ونقاطها بنجاح!")
-          st.rerun()
-        else:
-          st.warning("لا توجد مباريات سابقة للتراجع عنها في هذا الدوري.")
+      with c_reset_s:
+        st.write("💥 **تصفير هذا الدوري**")
+        chk_sp_reset = st.checkbox(
+            f"تأكيد تصفير {sport_type} فقط؟", key="chk_sp"
+        )
+        if st.button(f"🔄 إعادة ضبط مصنع لـ ({sport_type})"):
+          if chk_sp_reset:
+            st.session_state.leagues_data[sport_type] = {
+                fam: {
+                    "لعب": 0,
+                    "فوز": 0,
+                    "تعادل": 0,
+                    "خسارة": 0,
+                    "له": 0,
+                    "عليه": 0,
+                    "النقاط": 0,
+                }
+                for fam in family_names
+            }
+            st.session_state.leagues_history[sport_type] = []
+            save_data_to_file()
+            st.success(f"تمت إعادة ضبط جدول {sport_type} بنجاح!")
+            st.rerun()
+          else:
+            st.warning("يرجى تحديد مربع التأكيد أولاً.")
 
-    with c_reset_s:
-      st.write("💥 **تصفير هذا الدوري**")
-      chk_sp_reset = st.checkbox(
-          f"تأكيد تصفير {sport_type} فقط؟", key="chk_sp"
-      )
-      if st.button(f"🔄 إعادة ضبط مصنع لـ ({sport_type})"):
-        if chk_sp_reset:
-          st.session_state.leagues_data[sport_type] = {
-              fam: {
-                  "لعب": 0,
-                  "فوز": 0,
-                  "تعادل": 0,
-                  "خسارة": 0,
-                  "له": 0,
-                  "عليه": 0,
-                  "النقاط": 0,
-              }
-              for fam in family_names
-          }
-          st.session_state.leagues_history[sport_type] = []
-          save_data_to_file()
-          st.success(f"تمت إعادة ضبط جدول {sport_type} بنجاح!")
-          st.rerun()
-        else:
-          st.warning("يرجى تحديد مربع التأكيد أولاً.")
-
-  st.markdown("---")
-  st.subheader(f"📊 جدول ترتيب {sport_type}")
-  league_df = pd.DataFrame.from_dict(
-      st.session_state.leagues_data[sport_type], orient="index"
-  )
-  league_df = league_df.sort_values(by="النقاط", ascending=False)
-  st.table(league_df)
+    st.markdown("---")
+    st.subheader(f"📊 جدول ترتيب {sport_type}")
+    league_df = pd.DataFrame.from_dict(
+        st.session_state.leagues_data[sport_type], orient="index"
+    )
+    league_df = league_df.sort_values(by="النقاط", ascending=False)
+    st.table(league_df)
 
 # ================= 4. البرنامج الاجتماعي =================
 elif selected_section == "🤝 البرنامج الاجتماعي":
